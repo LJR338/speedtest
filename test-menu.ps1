@@ -108,8 +108,8 @@ if ($choice -eq "H" -or $choice -eq "h") {
     $tempFile = "$PSScriptRoot\ippools\ip_history_all.txt"
     $raw.IP | Set-Content $tempFile -Encoding UTF8
 
-    $threads = $raw.Count
-    Write-Host "  步骤2: 对 $($raw.Count) 个IP全量测速 ($threads 线程)..." -ForegroundColor DarkGray
+    $threads = [Math]::Max(1, [Math]::Floor($raw.Count / 10))
+    Write-Host "  步骤2: 对 $($raw.Count) 个IP全量测速 (-n $threads 线程)..." -ForegroundColor DarkGray
 
     Push-Location $PSScriptRoot
     $exeArgs = "-n $threads -f ippools\ip_history_all.txt -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 15".Split(" ")

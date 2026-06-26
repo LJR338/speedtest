@@ -3,6 +3,7 @@ output/
 result.csv
 ip_history.csv
 优选订阅.txt
+即时订阅.txt
 
 # 系统文件
 .DS_Store
