@@ -30,10 +30,10 @@ $template = $subCfg.template
 
 # 解析模板：分离 scheme@prefix、端口、query string
 # 格式: protocol://uuid@HOST:PORT?params...#TAG
-if ($template -match '^([^@]+@)(?:\[?[^\]]+\]?|[^\[:?\s#]+)(:\d+)?(\?[^#]*)?') {
+if ($template -match '^([^@]+@)([^:?\s#]+)(:\d+)?(\?[^#]*)?') {
     $linkPrefix  = $Matches[1]      # "vless://uuid@"
-    $linkPort    = if ($Matches[2]) { $Matches[2] } else { "" }  # ":443"
-    $linkQuery   = if ($Matches[3]) { $Matches[3] } else { "" }  # "?encryption=..."
+    $linkPort    = if ($Matches[3]) { $Matches[3] } else { "" }  # ":443"
+    $linkQuery   = if ($Matches[4]) { $Matches[4] } else { "" }  # "?encryption=..."
 } else {
     Write-Host "ERROR: invalid subscription template" -ForegroundColor Red
     if (-not $Scheduled) { pause }

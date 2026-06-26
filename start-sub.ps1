@@ -1,4 +1,4 @@
-$root = Split-Path -Parent $MyInvocation.MyCommand.Path
+﻿$root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $subFile    = Join-Path $root "优选订阅.txt"
 $instantFile = Join-Path $root "即时订阅.txt"
 $port = 18081
