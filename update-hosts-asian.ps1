@@ -413,8 +413,8 @@ $base64Content = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes
 $base64Content | Set-Content $subFile -Encoding ASCII
 Write-Host "  subscription: $($pool.Count) nodes -> sub.txt (base64)" -ForegroundColor Green
 
-# -- instant subscription: 本次测速前15（仅手动模式） --
-if (-not $Scheduled) {
+# -- instant subscription: 本次测速前15（H 选项专用） --
+if ($SkipTest) {
     $instantSubFile = "$cfstDir\即时订阅.txt"
     $instantTop15 = $currentResults | Sort-Object Speed -Descending | Select-Object -First 15
     $instantLinks = @()
