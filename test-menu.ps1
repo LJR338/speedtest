@@ -108,7 +108,7 @@ if ($choice -eq "H" -or $choice -eq "h") {
     $tempFile = "$PSScriptRoot\ippools\ip_history_all.txt"
     $raw.IP | Set-Content $tempFile -Encoding UTF8
 
-    $threads = [Math]::Max(1, [Math]::Floor($raw.Count / 10))
+    $threads = [Math]::Ceiling(($raw.Count + 1) / 10)
     Write-Host "  步骤2: 对 $($raw.Count) 个IP全量测速 (-n $threads 线程)..." -ForegroundColor DarkGray
 
     Push-Location $PSScriptRoot
