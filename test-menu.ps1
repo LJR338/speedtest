@@ -57,10 +57,11 @@ function Submit-HistoryAndSubscription {
     }
 }
 
-Write-Host ""
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  CloudflareST Test Menu" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
+while ($true) {
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "  CloudflareST Test Menu" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 for ($i = 0; $i -lt $profiles.Count; $i++) {
@@ -80,13 +81,13 @@ Write-Host ""
 
 $choice = Read-Host "Choose [0-$($profiles.Count)] or H"
 
-if ($choice -eq "0" -or $choice -eq "") { exit 0 }
+if ($choice -eq "0" -or $choice -eq "") { break }
 
 if ($choice -eq "H" -or $choice -eq "h") {
     $historyCsv = "$PSScriptRoot\ip_history.csv"
     if (-not (Test-Path $historyCsv)) {
         Write-Host "ERROR: ip_history.csv not found. Run a normal test first." -ForegroundColor Red
-        pause; exit 1
+        pause; continue
     }
 
     Write-Host ""
@@ -128,7 +129,7 @@ if ($choice -eq "H" -or $choice -eq "h") {
         # H 选项不写入 ip_history.csv，仅更新 hosts + 订阅
         $uaPath = "$PSScriptRoot\update-hosts-asian.ps1"
         if (Test-Path $uaPath) {
-            & $uaPath -Scheduled -SkipTest -NoHistory
+            Start-Process powershell -Wait -NoNewWindow -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$uaPath`" -Scheduled -SkipTest -NoHistory"
             Write-Host "Hosts + subscription updated." -ForegroundColor Green
         }
     } else {
@@ -136,15 +137,15 @@ if ($choice -eq "H" -or $choice -eq "h") {
     }
     Pop-Location
     Write-Host ""
-    Write-Host "Press any key to exit..."
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    exit 0
+    Write-Host "H option done, returning to menu..." -ForegroundColor Magenta
+    Start-Sleep -Seconds 2
+    continue
 }
 
 $idx = [int]$choice - 1
 if ($idx -lt 0 -or $idx -ge $profiles.Count) {
     Write-Host "Invalid choice" -ForegroundColor Red
-    pause; exit 1
+    pause; continue
 }
 
 $profile = $profiles[$idx]
@@ -172,5 +173,7 @@ if (Test-Path "$PSScriptRoot\output\result.csv") {
 Pop-Location
 
 Write-Host ""
-Write-Host "Press any key to exit..."
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+Write-Host "Test done, returning to menu..." -ForegroundColor Green
+Start-Sleep -Seconds 2
+continue
+}
