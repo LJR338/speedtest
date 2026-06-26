@@ -84,9 +84,10 @@ Write-Host ""
 Write-Host "  [0] Exit" -ForegroundColor DarkGray
 Write-Host "  [H] 历史IP全量重测" -ForegroundColor Magenta
 Write-Host "  [U] 更新 ip_best.txt (历史IP→/22网段展开)" -ForegroundColor Cyan
+Write-Host "  [R] 查看历史数据统计" -ForegroundColor Yellow
 Write-Host ""
 
-$choice = Read-Host "Choose [0-$($profiles.Count)] or H/U"
+$choice = Read-Host "Choose [0-$($profiles.Count)] or H/U/R"
 
 if ($choice -eq "0" -or $choice -eq "") { break }
 
@@ -130,6 +131,47 @@ if ($choice -eq "U" -or $choice -eq "u") {
     Write-Host "  (下次启动菜单 /22 行数将自动更新)" -ForegroundColor DarkGray
     Write-Host ""
     continue
+}
+
+if ($choice -eq "R" -or $choice -eq "r") {
+    $historyCsv = "$PSScriptRoot\ip_history.csv"
+    if (-not (Test-Path $historyCsv)) {
+        Write-Host "ERROR: ip_history.csv not found" -ForegroundColor Red
+        pause; continue
+    }
+
+    Write-Host ""
+    Write-Host "=== 历史数据统计 ===" -ForegroundColor Yellow
+
+    $data = Get-Content $historyCsv -Encoding UTF8 | Select-Object -Skip 1 |
+        ForEach-Object {
+            $cols = $_ -split ","
+            [PSCustomObject]@{
+                IP    = $cols[0]
+                Speed = [double]$cols[2]
+                Loss  = [double]$cols[3]
+                Time  = try { [datetime]$cols[4].Trim() } catch { $null }
+            }
+        }
+
+    $total = $data.Count
+    $uniqueIPs = ($data | Group-Object IP).Count
+    $maxSpeed = ($data | Measure-Object Speed -Maximum).Maximum
+    $avgSpeed = ($data | Measure-Object Speed -Average).Average
+    $minLoss = ($data | Measure-Object Loss -Minimum).Minimum
+    $avgLoss = ($data | Measure-Object Loss -Average).Average
+    $earliest = ($data | Sort-Object Time | Select-Object -First 1).Time.ToString("yyyy-MM-dd HH:mm")
+    $latest   = ($data | Sort-Object Time -Descending | Select-Object -First 1).Time.ToString("yyyy-MM-dd HH:mm")
+
+    Write-Host "  总记录数: $total" -ForegroundColor White
+    Write-Host "  唯一IP数: $uniqueIPs" -ForegroundColor White
+    Write-Host "  时间范围: $earliest → $latest" -ForegroundColor DarkGray
+    Write-Host "  最大速度: $([math]::Round($maxSpeed,1)) MB/s" -ForegroundColor Green
+    Write-Host "  平均速度: $([math]::Round($avgSpeed,1)) MB/s" -ForegroundColor DarkGray
+    Write-Host "  最低丢包: $([math]::Round($minLoss,2)) %" -ForegroundColor Green
+    Write-Host "  平均丢包: $([math]::Round($avgLoss,2)) %" -ForegroundColor DarkGray
+    Write-Host ""
+    pause; continue
 }
 
 if ($choice -eq "H" -or $choice -eq "h") {
