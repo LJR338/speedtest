@@ -377,7 +377,14 @@ Write-Host "[4/4] writing hosts + subscription..." -ForegroundColor Yellow
 
 # -- hosts: top 3 (手动取本次测速最快, 计划任务取历史评分) --
 if ($Scheduled) {
-    $top3 = $ranked | Select-Object -First 3
+    # 如果本次有 >10MB/s 的IP，优先用它们（不用历史评分）
+    $fastIPs = $currentResults | Where-Object { $_.Speed -gt 10 } | Sort-Object Speed -Descending
+    if ($fastIPs.Count -gt 0) {
+        $top3 = $fastIPs | Select-Object -First 3
+        Write-Host "  (Scheduled) fast IPs (>10MB/s) from current test: $($fastIPs.Count), using top 3" -ForegroundColor Magenta
+    } else {
+        $top3 = $ranked | Select-Object -First 3
+    }
 } else {
     $top3 = $currentResults | Sort-Object Speed -Descending | Select-Object -First 3
 }
