@@ -266,7 +266,7 @@ if ($choice -eq "H" -or $choice -eq "h") {
     Push-Location $PSScriptRoot
     $exeArgs = "-n $threads -f ippools\ip_history_all.txt -o output\result.csv $hArgs".Split(" ")
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    & .\bin\CloudflareST.exe $exeArgs
+    "`n" | & .\bin\CloudflareST.exe $exeArgs
     $sw.Stop()
     Write-Host "  耗时: $([math]::Round($sw.Elapsed.TotalSeconds,0))s" -ForegroundColor DarkGray
 
@@ -280,11 +280,16 @@ if ($choice -eq "H" -or $choice -eq "h") {
             }
         Write-Host ""
 
-        # H 选项不写入 ip_history.csv，仅更新 hosts + 订阅
-        $uaPath = "$PSScriptRoot\update-hosts-asian.ps1"
-        if (Test-Path $uaPath) {
-            Start-Process powershell -Wait -NoNewWindow -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$uaPath`" -Scheduled -SkipTest -NoHistory"
-            Write-Host "Hosts + subscription updated." -ForegroundColor Green
+        $confirm = Read-Host "  满意本次结果? [Y/n]（默认Y）"
+        if ($confirm -eq "n" -or $confirm -eq "N") {
+            Write-Host "  已放弃本次结果" -ForegroundColor Yellow
+        } else {
+            # H 选项不写入 ip_history.csv，仅更新 hosts + 订阅
+            $uaPath = "$PSScriptRoot\update-hosts-asian.ps1"
+            if (Test-Path $uaPath) {
+                Start-Process powershell -Wait -NoNewWindow -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$uaPath`" -Scheduled -SkipTest -NoHistory"
+                Write-Host "Hosts + subscription updated." -ForegroundColor Green
+            }
         }
     } else {
         Write-Host "ERROR: no result.csv output" -ForegroundColor Red
@@ -330,16 +335,22 @@ Write-Host ""
 Push-Location $PSScriptRoot
 $exeArgs = $dynArgs -split " "
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
-& .\bin\CloudflareST.exe $exeArgs
+"`n" | & .\bin\CloudflareST.exe $exeArgs
 $sw.Stop()
 Write-Host "  耗时: $([math]::Round($sw.Elapsed.TotalSeconds,0))s" -ForegroundColor DarkGray
 
 if (Test-Path "$PSScriptRoot\output\result.csv") {
     Write-Host ""
     Write-Host "Test complete. output\result.csv generated." -ForegroundColor Green
+    Write-Host ""
 
-    if ($FeedHistory) {
-        Submit-HistoryAndSubscription
+    $confirm = Read-Host "  满意本次结果? [Y/n]（默认Y）"
+    if ($confirm -eq "n" -or $confirm -eq "N") {
+        Write-Host "  已放弃本次结果" -ForegroundColor Yellow
+    } else {
+        if ($FeedHistory) {
+            Submit-HistoryAndSubscription
+        }
     }
 } else {
     Write-Host "ERROR: no result.csv output" -ForegroundColor Red
