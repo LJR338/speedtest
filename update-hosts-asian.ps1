@@ -401,8 +401,13 @@ for ($i = 0; $i -lt $mapping.Count; $i++) {
     Write-Host "  $($top3[$ipIndex].IP) -> $($mapping[$i].domain)" -ForegroundColor Green
 }
 
-[System.IO.File]::WriteAllLines($hostsPath, $newHosts, [System.Text.UTF8Encoding]::new($false))
-ipconfig /flushdns | Out-Null
+try {
+    [System.IO.File]::WriteAllLines($hostsPath, $newHosts, [System.Text.UTF8Encoding]::new($false))
+    ipconfig /flushdns | Out-Null
+} catch {
+    Write-Host "WARNING: Failed to write hosts — $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "  Possibly locked by security software. Try running as Administrator." -ForegroundColor DarkGray
+}
 
 # -- subscription: all history IPs (deduped) --
 $pool = $ranked   # 全量订阅，IP 已去重

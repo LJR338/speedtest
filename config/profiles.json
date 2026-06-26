@@ -1,6 +1,7 @@
-[
-  {
-    "name": "优选 /22",
+{
+  "profiles": [
+    {
+      "name": "优选 /22",
     "file": "ippools\\ip_best.txt",
     "args": "-n 200 -f ippools\\ip_best.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 15",
     "desc": "历史高分 /22 精选，速度最稳 · 11264 IP"
@@ -34,5 +35,7 @@
     "file": "ippools\\ip_full.txt",
     "args": "-n 300 -f ippools\\ip_full.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 0.5 -dn 10 -p 15",
     "desc": "原始基线 IP 池 · 300线程"
-  }
-]
+    }
+  ],
+  "h_args": "-url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 10"
+}

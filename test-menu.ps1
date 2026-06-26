@@ -8,6 +8,8 @@ if (-not (Test-Path $configFile)) {
 }
 
 $profiles = Get-Content $configFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$hArgs   = $profiles.h_args
+$profiles = $profiles.profiles
 if ($profiles.Count -eq 0) {
     Write-Host "ERROR: no profiles in config" -ForegroundColor Red
     pause; exit 1
@@ -57,12 +59,50 @@ function Submit-HistoryAndSubscription {
     }
 }
 
+# --- 自动启动订阅服务（如未运行） ---
+$subPort = 18081
+$subRunning = $false
+try {
+    $conn = Get-NetTCPConnection -LocalPort $subPort -ErrorAction Stop
+    if ($conn.State -eq 'Listen') { $subRunning = $true }
+} catch {}
+if (-not $subRunning) {
+    $subScript = "$PSScriptRoot\start-sub.ps1"
+    if (Test-Path $subScript) {
+        Start-Process powershell -WindowStyle Hidden -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$subScript`""
+        Write-Host "订阅服务已启动 (http://127.0.0.1:${subPort})" -ForegroundColor DarkGray
+    }
+}
+
+# --- 行数缓存（避免每次循环读大文件） ---
+$lineCache = @{}
+
 while ($true) {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host "  CloudflareST Test Menu" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
-Write-Host ""
+
+    # 上次测速摘要
+    $histFile = "$PSScriptRoot\ip_history.csv"
+    if (Test-Path $histFile) {
+        $last = Get-Content $histFile -Tail 1 -Encoding UTF8
+        if ($last -match ",") {
+            $cols = $last -split ","
+            $lastTime = if ($cols[4]) { $cols[4].Trim() } else { "N/A" }
+            $lastIP   = $cols[0]
+            $lastSpd  = if ($cols[2]) { [math]::Round([double]$cols[2],1) } else { "N/A" }
+            Write-Host "  上次: $lastTime | $lastSpd MB/s | $lastIP" -ForegroundColor DarkGray
+        }
+    }
+    Write-Host ""
+
+    # 订阅服务状态
+    $subOnline = $false
+    try { $subOnline = (Get-NetTCPConnection -LocalPort $subPort -ErrorAction Stop).State -eq 'Listen' } catch {}
+    $subLabel = if ($subOnline) { "已启动" } else { "未运行" }
+    Write-Host "  订阅: $subLabel (127.0.0.1:${subPort})" -ForegroundColor DarkGray
+    Write-Host ""
 
 for ($i = 0; $i -lt $profiles.Count; $i++) {
     $n = $i + 1
@@ -71,8 +111,12 @@ for ($i = 0; $i -lt $profiles.Count; $i++) {
     if ($argsStr -match "-f\s+(\S+)") {
         $ipFile = Join-Path $PSScriptRoot $Matches[1]
         if (Test-Path $ipFile) {
-            $lineCount = (Get-Content $ipFile | Measure-Object).Count
-            $threads = [Math]::Ceiling($lineCount / 30)
+            $fw = (Get-Item $ipFile).LastWriteTime
+            if (-not $lineCache[$ipFile] -or $lineCache[$ipFile].Time -ne $fw) {
+                $lineCache[$ipFile] = @{ Count = (Get-Content $ipFile | Measure-Object).Count; Time = $fw }
+            }
+            $lineCount = $lineCache[$ipFile].Count
+            $threads = [Math]::Ceiling($lineCount / 20)
         }
     }
     Write-Host "  [$n] " -NoNewline -ForegroundColor Yellow
@@ -89,7 +133,11 @@ Write-Host ""
 
 $choice = Read-Host "Choose [0-$($profiles.Count)] or H/U/R"
 
-if ($choice -eq "0" -or $choice -eq "") { break }
+if ($choice -eq "0") { break }
+if ($choice -eq "") {
+    if ($lastChoice) { $choice = $lastChoice; Write-Host "  (repeat: $choice)" -ForegroundColor DarkGray }
+    else { Write-Host "  首次使用，请输入 [1-$($profiles.Count)] 或 H/U/R 选择" -ForegroundColor Yellow; continue }
+}
 
 if ($choice -eq "U" -or $choice -eq "u") {
     $historyCsv = "$PSScriptRoot\ip_history.csv"
@@ -130,6 +178,7 @@ if ($choice -eq "U" -or $choice -eq "u") {
     Write-Host "  写入: $($allIps.Count) 个IP → ippools\ip_best.txt" -ForegroundColor Green
     Write-Host "  (下次启动菜单 /22 行数将自动更新)" -ForegroundColor DarkGray
     Write-Host ""
+    $lastChoice = "U"
     continue
 }
 
@@ -170,7 +219,18 @@ if ($choice -eq "R" -or $choice -eq "r") {
     Write-Host "  平均速度: $([math]::Round($avgSpeed,1)) MB/s" -ForegroundColor DarkGray
     Write-Host "  最低丢包: $([math]::Round($minLoss,2)) %" -ForegroundColor Green
     Write-Host "  平均丢包: $([math]::Round($avgLoss,2)) %" -ForegroundColor DarkGray
+
+    $topIPs = $data | Group-Object IP | ForEach-Object {
+        [PSCustomObject]@{IP=$_.Name; Count=$_.Count; AvgSpeed=[math]::Round(($_.Group | Measure-Object Speed -Average).Average,1); AvgLoss=[math]::Round(($_.Group | Measure-Object Loss -Average).Average,2)}
+    } | Sort-Object AvgSpeed -Descending | Select-Object -First 10
+
     Write-Host ""
+    Write-Host "  Top 10 IP (历史均值):" -ForegroundColor Cyan
+    $topIPs | ForEach-Object {
+        Write-Host "    $($_.IP)  均值 $($_.AvgSpeed) MB/s  出现 $($_.Count) 次  均丢包 $($_.AvgLoss)%" -ForegroundColor Gray
+    }
+    Write-Host ""
+    $lastChoice = "R"
     pause; continue
 }
 
@@ -204,8 +264,11 @@ if ($choice -eq "H" -or $choice -eq "h") {
     Write-Host "  步骤2: 对 $($raw.Count) 个IP全量测速 (-n $threads 线程)..." -ForegroundColor DarkGray
 
     Push-Location $PSScriptRoot
-    $exeArgs = "-n $threads -f ippools\ip_history_all.txt -o output\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 10".Split(" ")
+    $exeArgs = "-n $threads -f ippools\ip_history_all.txt -o output\result.csv $hArgs".Split(" ")
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
     & .\bin\CloudflareST.exe $exeArgs
+    $sw.Stop()
+    Write-Host "  耗时: $([math]::Round($sw.Elapsed.TotalSeconds,0))s" -ForegroundColor DarkGray
 
     if (Test-Path "$PSScriptRoot\output\result.csv") {
         Write-Host ""
@@ -228,8 +291,7 @@ if ($choice -eq "H" -or $choice -eq "h") {
     }
     Pop-Location
     Write-Host ""
-    Write-Host "H option done, returning to menu..." -ForegroundColor Magenta
-    Start-Sleep -Seconds 2
+    $lastChoice = "H"
     continue
 }
 
@@ -245,8 +307,12 @@ $profile = $profiles[$idx]
 if ($profile.args -match "-f\s+(\S+)") {
     $ipFile = Join-Path $PSScriptRoot $Matches[1]
     if (Test-Path $ipFile) {
-        $lineCount = (Get-Content $ipFile | Measure-Object).Count
-        $dynN = [Math]::Ceiling($lineCount / 30)
+        $fw = (Get-Item $ipFile).LastWriteTime
+        if (-not $lineCache[$ipFile] -or $lineCache[$ipFile].Time -ne $fw) {
+            $lineCache[$ipFile] = @{ Count = (Get-Content $ipFile | Measure-Object).Count; Time = $fw }
+        }
+        $lineCount = $lineCache[$ipFile].Count
+        $dynN = [Math]::Ceiling($lineCount / 20)
         $dynArgs = $profile.args -replace '-n \d+', "-n $dynN"
     } else {
         $dynArgs = $profile.args
@@ -263,7 +329,10 @@ Write-Host ""
 
 Push-Location $PSScriptRoot
 $exeArgs = $dynArgs -split " "
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
 & .\bin\CloudflareST.exe $exeArgs
+$sw.Stop()
+Write-Host "  耗时: $([math]::Round($sw.Elapsed.TotalSeconds,0))s" -ForegroundColor DarkGray
 
 if (Test-Path "$PSScriptRoot\output\result.csv") {
     Write-Host ""
@@ -279,7 +348,6 @@ if (Test-Path "$PSScriptRoot\output\result.csv") {
 Pop-Location
 
 Write-Host ""
-Write-Host "Test done, returning to menu..." -ForegroundColor Green
-Start-Sleep -Seconds 2
+$lastChoice = $choice
 continue
 }

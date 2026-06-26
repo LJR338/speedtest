@@ -5,7 +5,15 @@ $port = 18081
 
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://127.0.0.1:$port/")
-$listener.Start()
+try {
+    $listener.Start()
+} catch {
+    Write-Host "ERROR: 端口 $port 已被占用 — $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  可能已有订阅服务在运行，或端口被其他程序占用。" -ForegroundColor DarkGray
+    Write-Host "  按任意键退出..." -ForegroundColor DarkGray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    exit 1
+}
 
 Write-Host "订阅服务已启动:"
 Write-Host "  优选订阅: http://127.0.0.1:$port/"
