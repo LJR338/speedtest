@@ -375,8 +375,12 @@ if ($ranked.Count -gt 0) {
 # ================================================================
 Write-Host "[4/4] writing hosts + subscription..." -ForegroundColor Yellow
 
-# -- hosts: top 3 --
-$top3 = $ranked | Select-Object -First 3
+# -- hosts: top 3 (手动取本次测速最快, 计划任务取历史评分) --
+if ($Scheduled) {
+    $top3 = $ranked | Select-Object -First 3
+} else {
+    $top3 = $currentResults | Sort-Object Speed -Descending | Select-Object -First 3
+}
 $hostsContent = Get-Content $hostsPath -Encoding UTF8
 $domains = $mapping | ForEach-Object { $_.domain }
 $newHosts = @($hostsContent | Where-Object {
