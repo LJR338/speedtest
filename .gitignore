@@ -1,0 +1,16 @@
+# 运行时输出
+output/
+result.csv
+ip_history.csv
+优选订阅.txt
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
