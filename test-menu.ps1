@@ -78,6 +78,20 @@ if (-not $subRunning) {
     }
 }
 
+# --- IP 池计数（支持 CIDR 段展开） ---
+function Get-IPPoolCount {
+    param([string]$FilePath)
+    $lines = Get-Content $FilePath
+    if ($lines.Count -gt 0 -and $lines[0] -match "/\d+$") {
+        $total = 0
+        foreach ($line in $lines) {
+            if ($line -match "/(\d+)$") { $total += [Math]::Pow(2, 32 - [int]$Matches[1]) }
+        }
+        return @{ Count = $total; IsCIDR = $true }
+    }
+    return @{ Count = $lines.Count; IsCIDR = $false }
+}
+
 # --- 行数缓存（避免每次循环读大文件） ---
 $lineCache = @{}
 
@@ -121,15 +135,20 @@ for ($i = 0; $i -lt $profiles.Count; $i++) {
         if (Test-Path $ipFile) {
             $fw = (Get-Item $ipFile).LastWriteTime
             if (-not $lineCache[$ipFile] -or $lineCache[$ipFile].Time -ne $fw) {
-                $lineCache[$ipFile] = @{ Count = (Get-Content $ipFile | Measure-Object).Count; Time = $fw }
+                $poolInfo = Get-IPPoolCount $ipFile
+                $lineCache[$ipFile] = @{ Count = $poolInfo.Count; IsCIDR = $poolInfo.IsCIDR; Time = $fw }
             }
             $lineCount = $lineCache[$ipFile].Count
+            $isCIDR = $lineCache[$ipFile].IsCIDR
             $threads = [Math]::Ceiling($lineCount / 20)
         }
     }
     Write-Host "  [$n] " -NoNewline -ForegroundColor Yellow
     Write-Host $profiles[$i].name -NoNewline -ForegroundColor White
-    if ($threads) { Write-Host "  (-n $threads / $lineCount 行)" -NoNewline -ForegroundColor DarkCyan }
+    if ($threads) {
+        if ($isCIDR) { Write-Host "  (-n $threads / $lineCount 个IP)" -NoNewline -ForegroundColor DarkCyan }
+        else { Write-Host "  (-n $threads / $lineCount 行)" -NoNewline -ForegroundColor DarkCyan }
+    }
     Write-Host "  $($profiles[$i].desc)" -ForegroundColor DarkGray
 }
 Write-Host ""
@@ -315,13 +334,14 @@ if ($idx -lt 0 -or $idx -ge $profiles.Count) {
 
 $profile = $profiles[$idx]
 
-# 动态 -n：行数/30 向上取整
+# 动态 -n：行数/20 向上取整（CIDR 段按展开后 IP 数计算）
 if ($profile.args -match "-f\s+(\S+)") {
     $ipFile = Join-Path $PSScriptRoot $Matches[1]
     if (Test-Path $ipFile) {
         $fw = (Get-Item $ipFile).LastWriteTime
         if (-not $lineCache[$ipFile] -or $lineCache[$ipFile].Time -ne $fw) {
-            $lineCache[$ipFile] = @{ Count = (Get-Content $ipFile | Measure-Object).Count; Time = $fw }
+            $poolInfo = Get-IPPoolCount $ipFile
+            $lineCache[$ipFile] = @{ Count = $poolInfo.Count; IsCIDR = $poolInfo.IsCIDR; Time = $fw }
         }
         $lineCount = $lineCache[$ipFile].Count
         $dynN = [Math]::Ceiling($lineCount / 20)
@@ -333,8 +353,9 @@ if ($profile.args -match "-f\s+(\S+)") {
     $dynArgs = $profile.args
 }
 
+$label = if ($lineCache[$ipFile].IsCIDR) { "个IP" } else { "行" }
 Write-Host ""
-Write-Host "Running: $($profile.name) (-n $dynN / $lineCount 行)" -ForegroundColor Yellow
+Write-Host "Running: $($profile.name) (-n $dynN / $lineCount $label)" -ForegroundColor Yellow
 Write-Host "  File : $($profile.file)" -ForegroundColor DarkYellow
 Write-Host "  Args : $dynArgs" -ForegroundColor DarkYellow
 Write-Host ""
