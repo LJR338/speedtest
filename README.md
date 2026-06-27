@@ -37,9 +37,9 @@ speedtest/
 ├── test-menu.ps1                 # 交互式测速菜单脚本
 ├── update-hosts-asian.ps1       # 测速 + hosts + 订阅生成脚本
 ├── start-sub.ps1                 # 本地订阅服务脚本
-├── 测速菜单.bat                   # test-menu.ps1 启动器
-├── 更新优选.bat                   # update-hosts-asian.ps1 启动器
-├── 启动订阅后台.bat               # start-sub.ps1 启动器
+├── 启动优选IP.bat                 # test-menu.ps1 启动器（小白入口）
+├── update-ip.bat                  # update-hosts-asian.ps1 启动器
+├── start-sub.bat                  # start-sub.ps1 启动器
 ├── ip_history.csv                # IP 历史记录（自动生成，48h 窗口）
 ├── 优选订阅.txt                   # 订阅文件（Base64 编码）
 └── 即时订阅.txt                   # 即时订阅文件（仅手动模式生成）
@@ -49,7 +49,7 @@ speedtest/
 
 ## 三个 BAT 脚本功能说明
 
-### 1. 测速菜单.bat → `test-menu.ps1`
+### 1. 启动优选IP.bat → `test-menu.ps1`
 
 交互式测速菜单，从 `config/profiles.json` 读取 6 种 IP 池配置，供用户选择执行。
 
@@ -62,7 +62,7 @@ speedtest/
 **参数说明**：
 - `-FeedHistory`：普通测速完成后，追加结果到 ip_history.csv 并生成订阅。不带此参数仅测速不记录。
 
-### 2. 更新优选.bat → `update-hosts-asian.ps1`
+### 2. update-ip.bat → `update-hosts-asian.ps1`
 
 核心全自动脚本，完成测速 → 历史评分 → hosts 写入 → 订阅生成。
 
@@ -102,7 +102,7 @@ speedtest/
 | hosts 选 IP | 本次测速 top 3 | 历史评分 top 3 |
 | 即时订阅 | 生成 即时订阅.txt（top 15） | 不生成 |
 
-### 3. 启动订阅后台.bat → `start-sub.ps1`
+### 3. start-sub.bat → `start-sub.ps1`
 
 基于 .NET `HttpListener` 启动本地 HTTP 服务，监听 `127.0.0.1:18081`，供 v2rayN 等客户端直接订阅。
 
