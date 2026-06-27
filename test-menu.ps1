@@ -83,13 +83,6 @@ function Get-IPPoolCount {
     param([string]$FilePath)
     if ($FilePath -match "ip\.txt$") { return @{ Count = 5955; IsCIDR = $true } }
     $lines = Get-Content $FilePath
-    if ($lines.Count -gt 0 -and $lines[0] -match "/\d+$") {
-        $total = 0
-        foreach ($line in $lines) {
-            if ($line -match "/(\d+)$") { $total += [Math]::Pow(2, 32 - [int]$Matches[1]) }
-        }
-        return @{ Count = $total; IsCIDR = $true }
-    }
     return @{ Count = $lines.Count; IsCIDR = $false }
 }
 
