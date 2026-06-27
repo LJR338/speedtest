@@ -7,12 +7,6 @@
     "desc": "历史高分 /22 精选，速度最稳 · 11264 IP"
   },
   {
-    "name": "CF IP 段",
-    "file": "ippools\\ip.txt",
-    "args": "-n 200 -f ippools\\ip.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 15",
-    "desc": "从 ip.txt 读取 CIDR 段展开测速"
-  },
-  {
     "name": "历史 /23",
     "file": "ippools\\ip_expanded_23.txt",
     "args": "-n 160 -f ippools\\ip_expanded_23.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 15",
@@ -25,16 +19,22 @@
     "desc": "历史高分 IP 所在 /24 全展开 · 2560 IP"
   },
   {
-    "name": "双倍合并池",
-    "file": "ippools\\ip_double.txt",
-    "args": "-n 1000 -f ippools\\ip_double.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 0.5 -dn 10 -p 15",
-    "desc": "多源 IP 合并扩充，大并发测速"
+    "name": "CF IP 段",
+    "file": "ippools\\ip.txt",
+    "args": "-n 200 -f ippools\\ip.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 15",
+    "desc": "从 ip.txt 读取 CIDR 段展开测速"
   },
   {
     "name": "全量原始池",
     "file": "ippools\\ip_full.txt",
     "args": "-n 300 -f ippools\\ip_full.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 0.5 -dn 10 -p 15",
     "desc": "原始基线 IP 池，速度门槛放宽至 0.5M"
+  },
+  {
+    "name": "双倍合并池",
+    "file": "ippools\\ip_double.txt",
+    "args": "-n 1000 -f ippools\\ip_double.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 0.5 -dn 10 -p 15",
+    "desc": "多源 IP 合并扩充，大并发测速"
     }
   ],
   "h_args": "-url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 10"
