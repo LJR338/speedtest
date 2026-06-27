@@ -9,6 +9,11 @@ if (-not (Test-Path $configFile)) {
 
 $profiles = Get-Content $configFile -Raw -Encoding UTF8 | ConvertFrom-Json
 $hArgs   = $profiles.h_args
+
+$subConfigFile = "$PSScriptRoot\config\subscription.json"
+if (-not (Test-Path $subConfigFile) -or -not ((Get-Content $subConfigFile -Raw -Encoding UTF8 | ConvertFrom-Json).template)) {
+    Write-Host "WARNING: config\subscription.json 未配置订阅模板" -ForegroundColor Yellow
+}
 $profiles = $profiles.profiles
 if ($profiles.Count -eq 0) {
     Write-Host "ERROR: no profiles in config" -ForegroundColor Red
@@ -53,7 +58,6 @@ function Submit-HistoryAndSubscription {
     $uaPath = "$PSScriptRoot\update-hosts-asian.ps1"
     if (Test-Path $uaPath) {
         & $uaPath -Scheduled -SkipTest
-        Write-Host "Subscription updated." -ForegroundColor Green
     } else {
         Write-Host "WARNING: update-hosts-asian.ps1 not found" -ForegroundColor Red
     }
@@ -292,7 +296,6 @@ if ($choice -eq "H" -or $choice -eq "h") {
             $uaPath = "$PSScriptRoot\update-hosts-asian.ps1"
             if (Test-Path $uaPath) {
                 Start-Process powershell -Wait -NoNewWindow -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$uaPath`" -Scheduled -SkipTest -NoHistory"
-                Write-Host "Hosts + subscription updated." -ForegroundColor Green
             }
         }
     } else {

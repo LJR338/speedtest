@@ -20,24 +20,27 @@ $subFile    = "$cfstDir\优选订阅.txt"
 
 # 订阅模板（从 config/subscription.json 读取完整 VLESS 链接作为模板，脚本自动替换 IP+标签）
 $subConfigFile = "$PSScriptRoot\config\subscription.json"
+$skipSubscription = $false
 if (-not (Test-Path $subConfigFile)) {
-    Write-Host "ERROR: config\subscription.json not found" -ForegroundColor Red
-    if (-not $Scheduled) { pause }
-    exit 1
-}
-$subCfg = Get-Content $subConfigFile -Raw -Encoding UTF8 | ConvertFrom-Json
-$template = $subCfg.template
-
-# 解析模板：分离 scheme@prefix、端口、query string
-# 格式: protocol://uuid@HOST:PORT?params...#TAG
-if ($template -match '^([^@]+@)([^:?\s#]+)(:\d+)?(\?[^#]*)?') {
-    $linkPrefix  = $Matches[1]      # "vless://uuid@"
-    $linkPort    = if ($Matches[3]) { $Matches[3] } else { "" }  # ":443"
-    $linkQuery   = if ($Matches[4]) { $Matches[4] } else { "" }  # "?encryption=..."
+    Write-Host "WARNING: config\subscription.json not found，跳过订阅生成" -ForegroundColor Yellow
+    $skipSubscription = $true
 } else {
-    Write-Host "ERROR: invalid subscription template" -ForegroundColor Red
-    if (-not $Scheduled) { pause }
-    exit 1
+    $subCfg = Get-Content $subConfigFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    $template = $subCfg.template
+    if (-not $template) {
+    Write-Host "WARNING: config\subscription.json 未配置订阅模板，跳过订阅生成" -ForegroundColor Yellow
+    $skipSubscription = $true
+} else {
+    # 解析模板：分离 scheme@prefix、端口、query string
+    if ($template -match '^([^@]+@)([^:?\s#]+)(:\d+)?(\?[^#]*)?') {
+        $linkPrefix  = $Matches[1]
+        $linkPort    = if ($Matches[3]) { $Matches[3] } else { "" }
+        $linkQuery   = if ($Matches[4]) { $Matches[4] } else { "" }
+    } else {
+        Write-Host "WARNING: config\subscription.json 订阅模板格式无效，跳过订阅生成" -ForegroundColor Yellow
+        $skipSubscription = $true
+    }
+    }
 }
 
 # 从配置文件读取域名映射
@@ -76,7 +79,7 @@ if (-not $SkipTest) {
     if ($Scheduled) {
         "" | & .\bin\CloudflareST.exe -n 1000 -f ippools\ip_double.txt -url "https://test.hondac.top/10mb.bin" -httping -cfcolo HKG,NRT,KIX -sl $sl -dn $dn -p 20
     } else {
-        & .\bin\CloudflareST.exe -n 200 -f ippools\ip_expanded_23.txt -url "https://test.hondac.top/10mb.bin" -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN,MNL,BKK,SGN -sl $sl -dn $dn -p 20
+        & .\bin\CloudflareST.exe -n 200 -f ippools\$ipFile -url "https://test.hondac.top/10mb.bin" -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN,MNL,BKK,SGN -sl $sl -dn $dn -p 20
     }
 
     if (-not (Test-Path $resultCsv)) {
@@ -94,6 +97,14 @@ if (-not $SkipTest) {
 Write-Host "[2/4] recording history..." -ForegroundColor Yellow
 $now = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
+# -SkipTest 时 result.csv 缺失的友好退出
+if ($SkipTest -and -not (Test-Path $resultCsv)) {
+    Write-Host "ERROR: -SkipTest requires a result.csv from a previous test (not found at $resultCsv)" -ForegroundColor Red
+    Write-Host "       Run without -SkipTest first, or place a valid result.csv in output\" -ForegroundColor DarkYellow
+    if (-not $Scheduled) { pause }
+    exit 1
+}
+
 $currentResults = @(Get-Content $resultCsv | Select-Object -Skip 1 | ForEach-Object {
     $cols = $_ -split ","
     if ($cols.Count -ge 6) {
@@ -109,7 +120,7 @@ if (-not $SkipTest -and $currentResults.Count -eq 0) {
     if ($Scheduled) {
         "" | & .\bin\CloudflareST.exe -n 1000 -f ippools\ip_double.txt -url "https://test.hondac.top/10mb.bin" -httping -cfcolo HKG,NRT,KIX -dn 1 -p 20
     } else {
-        & .\bin\CloudflareST.exe -n 500 -f ippools\ip_expanded_cf22.txt -url "https://test.hondac.top/10mb.bin" -httping -cfcolo HKG,NRT,KIX -dn 1 -p 20
+        & .\bin\CloudflareST.exe -n 500 -f ippools\$ipFile -url "https://test.hondac.top/10mb.bin" -httping -cfcolo HKG,NRT,KIX -dn 1 -p 20
     }
     Pop-Location
     $currentResults = @(Get-Content $resultCsv | Select-Object -Skip 1 | ForEach-Object {
@@ -405,53 +416,75 @@ try {
     [System.IO.File]::WriteAllLines($hostsPath, $newHosts, [System.Text.UTF8Encoding]::new($false))
     ipconfig /flushdns | Out-Null
 } catch {
-    Write-Host "WARNING: Failed to write hosts — $($_.Exception.Message)" -ForegroundColor Yellow
-    Write-Host "  Possibly locked by security software. Try running as Administrator." -ForegroundColor DarkGray
+    Write-Host "WARNING: hosts 写入被拦截，正在自动获取权限..." -ForegroundColor Yellow
+    try {
+        takeown /f $hostsPath | Out-Null
+        icacls $hostsPath /grant "BUILTIN\Administrators:F" | Out-Null
+        [System.IO.File]::WriteAllLines($hostsPath, $newHosts, [System.Text.UTF8Encoding]::new($false))
+        ipconfig /flushdns | Out-Null
+        Write-Host "  hosts 写入成功（已自动获取权限）" -ForegroundColor Green
+    } catch {
+        Write-Host "ERROR: 自动获取权限失败，hosts 写入未完成" -ForegroundColor Red
+        Write-Host "  $($_.Exception.Message)" -ForegroundColor DarkGray
+    }
 }
 
 # -- subscription: all history IPs (deduped) --
-$pool = $ranked   # 全量订阅，IP 已去重
-$links = @()
-$idx   = 1
-foreach ($ipObj in $pool) {
-    $score = if ($ipObj.PSObject.Properties.Name -contains 'FinalScore') { $ipObj.FinalScore } else { $ipObj.StabilityScore }
-    $tag  = "CF-${idx}[s${score}] $([math]::Round($ipObj.LatestSpeed,1))M"
-    $link = "${linkPrefix}$($ipObj.IP)${linkPort}${linkQuery}#$tag"
-    $links += $link
-    $idx++
-}
-$rawContent = $links -join "`r`n"
-$base64Content = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($rawContent))
-$base64Content | Set-Content $subFile -Encoding ASCII
-Write-Host "  subscription: $($pool.Count) nodes -> sub.txt (base64)" -ForegroundColor Green
-
-# -- instant subscription: 本次测速前15（H 选项专用） --
-if ($SkipTest) {
-    $instantSubFile = "$cfstDir\即时订阅.txt"
-    $instantTop15 = $currentResults | Sort-Object Speed -Descending | Select-Object -First 15
-    $instantLinks = @()
-    $i = 1
-    foreach ($ipObj in $instantTop15) {
-        $tag = "CF-H-${i} $([math]::Round($ipObj.Speed,1))M"
-        $instantLinks += "${linkPrefix}$($ipObj.IP)${linkPort}${linkQuery}#$tag"
-        $i++
+if (-not $skipSubscription) {
+    $pool = $ranked   # 全量订阅，IP 已去重
+    $links = @()
+    $idx   = 1
+    foreach ($ipObj in $pool) {
+        $score = if ($ipObj.PSObject.Properties.Name -contains 'FinalScore') { $ipObj.FinalScore } else { $ipObj.StabilityScore }
+        $tag  = "CF-${idx}[s${score}] $([math]::Round($ipObj.LatestSpeed,1))M"
+        $link = "${linkPrefix}$($ipObj.IP)${linkPort}${linkQuery}#$tag"
+        $links += $link
+        $idx++
     }
-    $instantRaw = $instantLinks -join "`r`n"
-    $instantBase64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($instantRaw))
-    $instantBase64 | Set-Content $instantSubFile -Encoding ASCII
-    Write-Host "  instant sub: top15 -> 即时订阅.txt (base64)" -ForegroundColor Green
+    $rawContent = $links -join "`r`n"
+    $base64Content = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($rawContent))
+    $base64Content | Set-Content $subFile -Encoding ASCII
+    Write-Host "  subscription: $($pool.Count) nodes -> sub.txt (base64)" -ForegroundColor Green
+
+    # -- instant subscription: 本次测速前15（H 选项专用） --
+    if ($SkipTest) {
+        $instantSubFile = "$cfstDir\即时订阅.txt"
+        $instantTop15 = $currentResults | Sort-Object Speed -Descending | Select-Object -First 15
+        $instantLinks = @()
+        $i = 1
+        foreach ($ipObj in $instantTop15) {
+            $tag = "CF-H-${i} $([math]::Round($ipObj.Speed,1))M"
+            $instantLinks += "${linkPrefix}$($ipObj.IP)${linkPort}${linkQuery}#$tag"
+            $i++
+        }
+        $instantRaw = $instantLinks -join "`r`n"
+        $instantBase64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($instantRaw))
+        $instantBase64 | Set-Content $instantSubFile -Encoding ASCII
+        Write-Host "  instant sub: top15 -> 即时订阅.txt (base64)" -ForegroundColor Green
+    }
 }
 
 # -- log --
 $logPath = "$cfstDir\output\update-history.log"
 $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 $hostsInfo = ($top3 | ForEach-Object { "$($_.IP)($($_.AvgDelay)ms/$($_.AvgSpeed)MB/s)" }) -join " | "
-$bestScore = if ($pool[0].PSObject.Properties.Name -contains 'FinalScore') { $pool[0].FinalScore } else { $pool[0].StabilityScore }
-$poolInfo  = "$($pool.Count)pool maxScore=$bestScore"
+if (-not $skipSubscription) {
+    $bestScore = if ($pool[0].PSObject.Properties.Name -contains 'FinalScore') { $pool[0].FinalScore } else { $pool[0].StabilityScore }
+    $poolInfo  = "$($pool.Count)pool maxScore=$bestScore"
+} else {
+    $poolInfo = "sub skipped (no template)"
+}
 Add-Content $logPath "$ts | hosts: $hostsInfo | pool: $poolInfo" -Encoding UTF8
 
 Write-Host ""
-Write-Host "DONE! hosts(3) + sub($($pool.Count)) updated" -ForegroundColor Cyan
+if (-not $skipSubscription) {
+    Write-Host "DONE! hosts(3) + sub($($pool.Count)) updated" -ForegroundColor Cyan
+} else {
+    Write-Host "DONE! hosts(3) updated (subscription skipped: 未配置订阅模板)" -ForegroundColor Yellow
+    Write-Host "  请在 config\subscription.json 中添加 template 字段，格式示例:" -ForegroundColor DarkGray
+    Write-Host '  "template": "vless://你的uuid@HOST:443?encryption=none&type=ws&host=sd.hondac.top&path=%2F#TAG"' -ForegroundColor DarkGray
+    Write-Host "  其中 HOST 和 #TAG 脚本会自动替换为优选 IP 和标签，其余照抄你的节点链接即可" -ForegroundColor DarkGray
+}
 
 if (-not $Scheduled) {
     Write-Host ""

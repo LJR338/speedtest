@@ -95,7 +95,7 @@ speedtest/
 
 | 维度 | 手动模式 | 计划任务 (-Scheduled) |
 |------|---------|---------------------|
-| IP 池 | ip_expanded_23.txt | ip_double.txt |
+| IP 池 | ip_expanded_cf22.txt | ip_double.txt |
 | 线程数 | 200 | 1000 |
 | 边缘节点 | 9 个（HKG,NRT,KIX,ICN,TPE,SIN,MNL,BKK,SGN） | 3 个（HKG,NRT,KIX） |
 | 测速下限 | speed ≥ 1 MB/s | speed ≥ 0.5 MB/s（高峰时段） |
