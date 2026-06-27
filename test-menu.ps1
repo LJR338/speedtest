@@ -148,14 +148,59 @@ for ($i = 0; $i -lt $profiles.Count; $i++) {
 Write-Host ""
 Write-Host "  [0] Exit" -ForegroundColor DarkGray
 Write-Host "  [H] 历史IP全量重测" -ForegroundColor Magenta
-Write-Host "  [U] 刷新菜单[1][3][4]IP池 (历史IP → /22/23/24展开)" -ForegroundColor Cyan
+Write-Host "  [U] 刷新菜单[1][2][3]IP池 (历史IP → /22/23/24展开)" -ForegroundColor Cyan
 Write-Host "  [R] 查看历史数据统计" -ForegroundColor Yellow
 Write-Host "  [UP] 上传订阅到服务器 (https://test.hondac.top/sub.txt)" -ForegroundColor DarkGreen
+Write-Host "  自动循环测速: N[n]  (如 5[3])" -ForegroundColor DarkGray
 Write-Host ""
 
 $choice = Read-Host "Choose [0-$($profiles.Count)] or H/U/R/UP"
 
 if ($choice -eq "0") { break }
+
+# 自动循环测速: N[n] (如 5[3] = profile 5, 循环 3 次)
+if ($choice -match '^(\d+)\[(\d+)\]$') {
+    $loopIdx = [int]$Matches[1] - 1
+    $loopCount = [int]$Matches[2]
+    if ($loopIdx -lt 0 -or $loopIdx -ge $profiles.Count -or $loopCount -lt 1 -or $loopCount -gt 100) {
+        Write-Host "Invalid. Example: 5[3] (profile 5, loop 3 times, max 100)" -ForegroundColor Red
+        pause; continue
+    }
+
+    $loopProfile = $profiles[$loopIdx]
+    $dynArgs = $loopProfile.args
+    if ($loopProfile.args -match "-f\s+(\S+)") {
+        $ipFile = Join-Path $PSScriptRoot $Matches[1]
+        if (Test-Path $ipFile) {
+            $poolInfo = Get-IPPoolCount $ipFile
+            $dynN = [Math]::Ceiling($poolInfo.Count / 20)
+            $dynArgs = $loopProfile.args -replace '-n \d+', "-n $dynN"
+        }
+    }
+
+    for ($i = 1; $i -le $loopCount; $i++) {
+        Write-Host ""
+        Write-Host "=== Loop $i / $loopCount : $($loopProfile.name) ===" -ForegroundColor Yellow
+        Push-Location $PSScriptRoot
+        $exeArgs = $dynArgs -split " "
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+        "`n" | & .\bin\CloudflareST.exe $exeArgs
+        $sw.Stop()
+        Write-Host "  耗时: $([math]::Round($sw.Elapsed.TotalSeconds,0))s" -ForegroundColor DarkGray
+
+        if (Test-Path "$PSScriptRoot\output\result.csv") {
+            Submit-HistoryAndSubscription
+        } else {
+            Write-Host "  Loop $i failed: no result.csv" -ForegroundColor Red
+        }
+        Pop-Location
+    }
+    Write-Host ""
+    Write-Host "=== $loopCount 次循环完成 ===" -ForegroundColor Green
+    $lastChoice = $choice
+    pause; continue
+}
+
 if ($choice -eq "") {
     if ($lastChoice) { $choice = $lastChoice; Write-Host "  (repeat: $choice)" -ForegroundColor DarkGray }
     else { Write-Host "  首次使用，请输入 [1-$($profiles.Count)] 或 H/U/R/UP 选择" -ForegroundColor Yellow; continue }
