@@ -150,7 +150,7 @@ Write-Host "  [0] Exit" -ForegroundColor DarkGray
 Write-Host "  [H] 历史IP全量重测" -ForegroundColor Magenta
 Write-Host "  [U] 刷新菜单[1][2][3]IP池 (历史IP → /22/23/24展开)" -ForegroundColor Cyan
 Write-Host "  [R] 查看历史数据统计" -ForegroundColor Yellow
-Write-Host "  [UP] 上传订阅到服务器 (https://test.hondac.top/sub.txt)" -ForegroundColor DarkGreen
+Write-Host "  [UP] 上传订阅到服务器" -ForegroundColor DarkGreen
 Write-Host "  [FULL] 一键全流程 (5→6→U→1→2→H)" -ForegroundColor Magenta
 Write-Host "  自动循环测速: N[n]  (如 5[3])" -ForegroundColor DarkGray
 Write-Host ""
@@ -442,7 +442,7 @@ if ($choice -eq "UP" -or $choice -eq "up") {
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  上传成功" -ForegroundColor Green
-        Write-Host "  订阅链接: https://test.hondac.top/sub.txt" -ForegroundColor Cyan
+        Write-Host "  订阅链接: https://test.hondac.top/xkdguddkdnj.txt" -ForegroundColor Cyan
     } else {
         Write-Host "  上传失败 (exit code $LASTEXITCODE)" -ForegroundColor Red
     }
