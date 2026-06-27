@@ -7,10 +7,10 @@
     "desc": "历史高分 /22 精选，速度最稳 · 11264 IP"
   },
   {
-    "name": "CF 官方 /22",
-    "file": "ippools\\ip_expanded_cf22.txt",
-    "args": "-n 200 -f ippools\\ip_expanded_cf22.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 15",
-    "desc": "官方全量 CIDR 展开到 /22 · 8192 IP"
+    "name": "CF IP 段",
+    "file": "ippools\\ip.txt",
+    "args": "-n 200 -f ippools\\ip.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 15",
+    "desc": "从 ip.txt 读取 CIDR 段展开测速"
   },
   {
     "name": "历史 /23",
