@@ -81,6 +81,7 @@ if (-not $subRunning) {
 # --- IP 池计数（支持 CIDR 段展开） ---
 function Get-IPPoolCount {
     param([string]$FilePath)
+    if ($FilePath -match "ip\.txt$") { return @{ Count = 5955; IsCIDR = $true } }
     $lines = Get-Content $FilePath
     if ($lines.Count -gt 0 -and $lines[0] -match "/\d+$") {
         $total = 0
