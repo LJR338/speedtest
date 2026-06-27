@@ -100,8 +100,12 @@ while ($true) {
     # 订阅服务状态
     $subOnline = $false
     try { $subOnline = (Get-NetTCPConnection -LocalPort $subPort -ErrorAction Stop).State -eq 'Listen' } catch {}
-    $subLabel = if ($subOnline) { "已启动" } else { "未运行" }
-    Write-Host "  订阅: $subLabel (127.0.0.1:${subPort})" -ForegroundColor DarkGray
+    if ($subOnline) {
+        Write-Host "  优选订阅: http://127.0.0.1:${subPort}/" -ForegroundColor Green
+        Write-Host "  即时订阅: http://127.0.0.1:${subPort}/instant" -ForegroundColor Green
+    } else {
+        Write-Host "  订阅: 未运行 (127.0.0.1:${subPort})" -ForegroundColor DarkGray
+    }
     Write-Host ""
 
 for ($i = 0; $i -lt $profiles.Count; $i++) {
