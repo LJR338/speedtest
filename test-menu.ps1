@@ -150,14 +150,15 @@ Write-Host "  [0] Exit" -ForegroundColor DarkGray
 Write-Host "  [H] 历史IP全量重测" -ForegroundColor Magenta
 Write-Host "  [U] 刷新菜单[1][3][4]IP池 (历史IP → /22/23/24展开)" -ForegroundColor Cyan
 Write-Host "  [R] 查看历史数据统计" -ForegroundColor Yellow
+Write-Host "  [UP] 上传订阅到服务器 (https://test.hondac.top/sub.txt)" -ForegroundColor DarkGreen
 Write-Host ""
 
-$choice = Read-Host "Choose [0-$($profiles.Count)] or H/U/R"
+$choice = Read-Host "Choose [0-$($profiles.Count)] or H/U/R/UP"
 
 if ($choice -eq "0") { break }
 if ($choice -eq "") {
     if ($lastChoice) { $choice = $lastChoice; Write-Host "  (repeat: $choice)" -ForegroundColor DarkGray }
-    else { Write-Host "  首次使用，请输入 [1-$($profiles.Count)] 或 H/U/R 选择" -ForegroundColor Yellow; continue }
+    else { Write-Host "  首次使用，请输入 [1-$($profiles.Count)] 或 H/U/R/UP 选择" -ForegroundColor Yellow; continue }
 }
 
 if ($choice -eq "U" -or $choice -eq "u") {
@@ -258,6 +259,34 @@ if ($choice -eq "R" -or $choice -eq "r") {
     }
     Write-Host ""
     $lastChoice = "R"
+    pause; continue
+}
+
+if ($choice -eq "UP" -or $choice -eq "up") {
+    $subFile = "$PSScriptRoot\优选订阅.txt"
+    if (-not (Test-Path $subFile)) {
+        Write-Host "ERROR: 优选订阅.txt not found. Run a test first." -ForegroundColor Red
+        pause; continue
+    }
+
+    Write-Host ""
+    Write-Host "=== 上传订阅到服务器 ===" -ForegroundColor DarkGreen
+    Write-Host "  源文件: $subFile" -ForegroundColor DarkGray
+
+    $sshKey = "$env:USERPROFILE\.ssh\vps_upload"
+    $target = "root@192.119.88.133:/var/www/sub.txt"
+
+    Write-Host "  上传中..." -ForegroundColor DarkGray
+    scp -i $sshKey $subFile $target 2>&1 | Out-Null
+
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  上传成功" -ForegroundColor Green
+        Write-Host "  订阅链接: https://test.hondac.top/sub.txt" -ForegroundColor Cyan
+    } else {
+        Write-Host "  上传失败 (exit code $LASTEXITCODE)" -ForegroundColor Red
+    }
+    Write-Host ""
+    $lastChoice = "UP"
     pause; continue
 }
 
