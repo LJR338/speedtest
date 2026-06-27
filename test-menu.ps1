@@ -273,11 +273,10 @@ if ($choice -eq "UP" -or $choice -eq "up") {
     Write-Host "=== 上传订阅到服务器 ===" -ForegroundColor DarkGreen
     Write-Host "  源文件: $subFile" -ForegroundColor DarkGray
 
-    $sshKey = "$env:USERPROFILE\.ssh\vps_upload"
-    $target = "root@192.119.88.133:/var/www/sub.txt"
+    $uploadUrl = "https://test.hondac.top/upload?token=LYpdHTy6XM7cHV4Rllw2OWRmihjX7Kk"
 
     Write-Host "  上传中..." -ForegroundColor DarkGray
-    scp -i $sshKey $subFile $target 2>&1 | Out-Null
+    curl.exe -s -X POST --data-binary "@$subFile" $uploadUrl 2>&1 | Out-Null
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  上传成功" -ForegroundColor Green
