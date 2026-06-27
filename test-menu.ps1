@@ -155,7 +155,7 @@ for ($i = 0; $i -lt $profiles.Count; $i++) {
 Write-Host ""
 Write-Host "  [0] Exit" -ForegroundColor DarkGray
 Write-Host "  [H] 历史IP全量重测" -ForegroundColor Magenta
-Write-Host "  [U] 更新菜单[1]优选/22的IP池 (历史IP → /22展开)" -ForegroundColor Cyan
+Write-Host "  [U] 刷新菜单[1][3][4]IP池 (历史IP → /22/23/24展开)" -ForegroundColor Cyan
 Write-Host "  [R] 查看历史数据统计" -ForegroundColor Yellow
 Write-Host ""
 
@@ -175,36 +175,42 @@ if ($choice -eq "U" -or $choice -eq "u") {
     }
 
     Write-Host ""
-    Write-Host "=== 历史IP → /22 网段展开 ===" -ForegroundColor Cyan
+    Write-Host "=== 历史IP → 多粒度网段展开 ===" -ForegroundColor Cyan
 
     $rawIps = Get-Content $historyCsv -Encoding UTF8 | Select-Object -Skip 1 |
         ForEach-Object { ($_ -split ",")[0] } | Sort-Object -Unique
 
     Write-Host "  历史唯一IP: $($rawIps.Count) 个" -ForegroundColor DarkGray
 
-    $subnets = [System.Collections.Generic.HashSet[string]]::new()
-    foreach ($ip in $rawIps) {
-        $oct = $ip -split '\.'
-        $o3 = [int]$oct[2] -band 252
-        [void]$subnets.Add("$($oct[0]).$($oct[1]).$o3.0")
-    }
-    Write-Host "  去重后 /22 网段: $($subnets.Count) 个" -ForegroundColor DarkGray
+    $masks = @(
+        @{ Mask=252; Size=1024; Name="22"; OutFile="ippools\ip_best.txt" }
+        @{ Mask=254; Size=512;  Name="23"; OutFile="ippools\ip_expanded_23.txt" }
+        @{ Mask=255; Size=256;  Name="24"; OutFile="ippools\ip_history_expanded.txt" }
+    )
 
-    Write-Host "  展开 IP 中..." -ForegroundColor DarkGray
-    $allIps = [System.Collections.Generic.List[string]]::new()
-    foreach ($net in $subnets) {
-        $parts = $net -split '\.'
-        $base = ([int]$parts[0] -shl 24) -bor ([int]$parts[1] -shl 16) -bor ([int]$parts[2] -shl 8)
-        for ($i = 0; $i -lt 1024; $i++) {
-            $v = $base + $i
-            [void]$allIps.Add("$((($v -shr 24) -band 255)).$((($v -shr 16) -band 255)).$((($v -shr 8) -band 255)).$(($v -band 255))")
+    foreach ($m in $masks) {
+        $subnets = [System.Collections.Generic.HashSet[string]]::new()
+        foreach ($ip in $rawIps) {
+            $oct = $ip -split '\.'
+            $o3 = [int]$oct[2] -band $m.Mask
+            [void]$subnets.Add("$($oct[0]).$($oct[1]).$o3.0")
         }
-    }
+        Write-Host "  /$($m.Name): $($subnets.Count) 网段" -ForegroundColor DarkGray
 
-    $outFile = "$PSScriptRoot\ippools\ip_best.txt"
-    [System.IO.File]::WriteAllLines($outFile, $allIps, [System.Text.UTF8Encoding]::new($false))
-    Write-Host "  写入: $($allIps.Count) 个IP → ippools\ip_best.txt" -ForegroundColor Green
-    Write-Host "  (下次启动菜单 /22 行数将自动更新)" -ForegroundColor DarkGray
+        $allIps = [System.Collections.Generic.List[string]]::new()
+        foreach ($net in $subnets) {
+            $parts = $net -split '\.'
+            $base = ([int]$parts[0] -shl 24) -bor ([int]$parts[1] -shl 16) -bor ([int]$parts[2] -shl 8)
+            for ($i = 0; $i -lt $m.Size; $i++) {
+                $v = $base + $i
+                [void]$allIps.Add("$((($v -shr 24) -band 255)).$((($v -shr 16) -band 255)).$((($v -shr 8) -band 255)).$(($v -band 255))")
+            }
+        }
+
+        $outPath = "$PSScriptRoot\$($m.OutFile)"
+        [System.IO.File]::WriteAllLines($outPath, $allIps, [System.Text.UTF8Encoding]::new($false))
+        Write-Host "    写入 $($allIps.Count) 个IP → $($m.OutFile)" -ForegroundColor Green
+    }
     Write-Host ""
     $lastChoice = "U"
     continue
