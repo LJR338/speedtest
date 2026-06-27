@@ -68,7 +68,7 @@ if ($hour -ge 19 -or $hour -le 1) {
 } else {
     $sl = 1; $dn = 5
 }
-$ipFile = if ($Scheduled) { "ippools\ip_double.txt" } else { "ippools\ip_expanded_cf22.txt" }
+$ipFile = if ($Scheduled) { "ippools\ip_double.txt" } else { "ippools\ip_custom.txt" }
 Write-Host "(source: $ipFile)" -ForegroundColor DarkYellow
 # ================================================================
 # 1. 测速

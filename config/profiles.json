@@ -20,9 +20,9 @@
   },
   {
     "name": "CF IP 段",
-    "file": "ippools\\ip.txt",
-    "args": "-n 200 -f ippools\\ip.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 15",
-    "desc": "从 ip.txt 读取 CIDR 段展开测速"
+    "file": "ippools\\ip_custom.txt",
+    "args": "-n 200 -f ippools\\ip_custom.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 15",
+    "desc": "从 ip_custom.txt 读取 CIDR 段展开测速"
   },
   {
     "name": "全量原始池",
