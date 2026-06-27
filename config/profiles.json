@@ -28,13 +28,13 @@
     "name": "双倍合并池",
     "file": "ippools\\ip_double.txt",
     "args": "-n 1000 -f ippools\\ip_double.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 0.5 -dn 10 -p 15",
-    "desc": "多源 IP 合并扩充 · 1000线程"
+    "desc": "多源 IP 合并扩充，大并发测速"
   },
   {
     "name": "全量原始池",
     "file": "ippools\\ip_full.txt",
     "args": "-n 300 -f ippools\\ip_full.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 0.5 -dn 10 -p 15",
-    "desc": "原始基线 IP 池 · 300线程"
+    "desc": "原始基线 IP 池，速度门槛放宽至 0.5M"
     }
   ],
   "h_args": "-url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 1 -dn 10 -p 10"
