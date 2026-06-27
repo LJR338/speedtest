@@ -134,7 +134,7 @@ for ($i = 0; $i -lt $profiles.Count; $i++) {
             }
             $lineCount = $lineCache[$ipFile].Count
             $isCIDR = $lineCache[$ipFile].IsCIDR
-            $threads = [Math]::Ceiling($lineCount / 20)
+            $threads = [Math]::Ceiling($lineCount / 2)
         }
     }
     Write-Host "  [$n] " -NoNewline -ForegroundColor Yellow
@@ -174,7 +174,7 @@ if ($choice -match '^(\d+)\[(\d+)\]$') {
         $ipFile = Join-Path $PSScriptRoot $Matches[1]
         if (Test-Path $ipFile) {
             $poolInfo = Get-IPPoolCount $ipFile
-            $dynN = [Math]::Min(100, [Math]::Ceiling($poolInfo.Count / 20))
+            $dynN = [Math]::Ceiling($poolInfo.Count / 2)
             $dynArgs = $loopProfile.args -replace '-n \d+', "-n $dynN"
         }
     }
@@ -228,7 +228,7 @@ if ($choice -eq "FULL" -or $choice -eq "full") {
                 $ipFile = Join-Path $PSScriptRoot $Matches[1]
                 if (Test-Path $ipFile) {
                     $poolInfo = Get-IPPoolCount $ipFile
-                    $dynN = [Math]::Min(100, [Math]::Ceiling($poolInfo.Count / 20))
+                    $dynN = [Math]::Ceiling($poolInfo.Count / 2)
                     $dynArgs = $p.args -replace '-n \d+', "-n $dynN"
                 }
             }
@@ -534,7 +534,7 @@ if ($profile.args -match "-f\s+(\S+)") {
             $lineCache[$ipFile] = @{ Count = $poolInfo.Count; IsCIDR = $poolInfo.IsCIDR; Time = $fw }
         }
         $lineCount = $lineCache[$ipFile].Count
-        $dynN = [Math]::Min(100, [Math]::Ceiling($lineCount / 20))
+        $dynN = [Math]::Ceiling($lineCount / 2)
         $dynArgs = $profile.args -replace '-n \d+', "-n $dynN"
     } else {
         $dynArgs = $profile.args
