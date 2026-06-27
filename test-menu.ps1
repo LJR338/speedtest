@@ -135,7 +135,7 @@ for ($i = 0; $i -lt $profiles.Count; $i++) {
 Write-Host ""
 Write-Host "  [0] Exit" -ForegroundColor DarkGray
 Write-Host "  [H] 历史IP全量重测" -ForegroundColor Magenta
-Write-Host "  [U] 更新 ip_best.txt (历史IP→/22网段展开)" -ForegroundColor Cyan
+Write-Host "  [U] 更新菜单[1]优选/22的IP池 (历史IP → /22展开)" -ForegroundColor Cyan
 Write-Host "  [R] 查看历史数据统计" -ForegroundColor Yellow
 Write-Host ""
 
