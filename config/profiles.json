@@ -3,39 +3,39 @@
     {
       "name": "优选 /22",
     "file": "ippools\\ip_best.txt",
-    "args": "-n 200 -f ippools\\ip_best.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 100 -dn 10 -p 15",
+    "args": "-n 200 -f ippools\\ip_best.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 150 -dn 10 -p 15",
     "desc": "历史高分 /22 精选，速度最稳 · 11264 IP"
   },
   {
     "name": "历史 /23",
     "file": "ippools\\ip_expanded_23.txt",
-    "args": "-n 160 -f ippools\\ip_expanded_23.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 100 -dn 10 -p 15",
+    "args": "-n 160 -f ippools\\ip_expanded_23.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 150 -dn 10 -p 15",
     "desc": "历史 /24 向上聚合一级 · 3072 IP"
   },
   {
     "name": "历史 /24",
     "file": "ippools\\ip_history_expanded.txt",
-    "args": "-n 150 -f ippools\\ip_history_expanded.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 100 -dn 10 -p 15",
+    "args": "-n 150 -f ippools\\ip_history_expanded.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 150 -dn 10 -p 15",
     "desc": "历史高分 IP 所在 /24 全展开 · 2560 IP"
   },
   {
     "name": "CF IP 段",
     "file": "ippools\\ip_custom.txt",
-    "args": "-n 200 -f ippools\\ip_custom.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 100 -dn 10 -p 15",
+    "args": "-n 200 -f ippools\\ip_custom.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 150 -dn 10 -p 15",
     "desc": "从 ip_custom.txt 读取 CIDR 段展开测速"
   },
   {
     "name": "全量原始池",
     "file": "ippools\\ip_full.txt",
-    "args": "-n 300 -f ippools\\ip_full.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 100 -dn 10 -p 15",
-    "desc": "全量 IP 池，-sl 10 -tl 100 严格筛选"
+    "args": "-n 300 -f ippools\\ip_full.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 150 -dn 10 -p 15",
+    "desc": "全量 IP 池，-sl 10 -tl 150 严格筛选"
   },
   {
     "name": "双倍合并池",
     "file": "ippools\\ip_double.txt",
-    "args": "-n 1000 -f ippools\\ip_double.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 100 -dn 10 -p 15",
+    "args": "-n 1000 -f ippools\\ip_double.txt -o output\\result.csv -url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 150 -dn 10 -p 15",
     "desc": "多源 IP 合并扩充，大并发测速"
     }
   ],
-  "h_args": "-url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 100 -dn 10 -p 10"
+  "h_args": "-url https://test.hondac.top/10mb.bin -httping -cfcolo HKG,NRT,KIX,ICN,TPE,SIN -sl 10 -tl 150 -dn 10 -p 10"
 }
