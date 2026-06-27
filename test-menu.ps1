@@ -151,6 +151,7 @@ Write-Host "  [H] 历史IP全量重测" -ForegroundColor Magenta
 Write-Host "  [U] 刷新菜单[1][2][3]IP池 (历史IP → /22/23/24展开)" -ForegroundColor Cyan
 Write-Host "  [R] 查看历史数据统计" -ForegroundColor Yellow
 Write-Host "  [UP] 上传订阅到服务器 (https://test.hondac.top/sub.txt)" -ForegroundColor DarkGreen
+Write-Host "  [FULL] 一键全流程 (5→6→U→1→2→H)" -ForegroundColor Magenta
 Write-Host "  自动循环测速: N[n]  (如 5[3])" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -197,6 +198,122 @@ if ($choice -match '^(\d+)\[(\d+)\]$') {
     }
     Write-Host ""
     Write-Host "=== $loopCount 次循环完成 ===" -ForegroundColor Green
+    $lastChoice = $choice
+    pause; continue
+}
+
+if ($choice -eq "FULL" -or $choice -eq "full") {
+    Write-Host ""
+    Write-Host "=== 一键全流程 (5→6→U→1→2→H) ===" -ForegroundColor Magenta
+
+    $steps = @(
+        @{Type="P"; Idx=4; Name=$profiles[4].name}
+        @{Type="P"; Idx=5; Name=$profiles[5].name}
+        @{Type="U"}
+        @{Type="P"; Idx=0; Name=$profiles[0].name}
+        @{Type="P"; Idx=1; Name=$profiles[1].name}
+        @{Type="H"}
+    )
+
+    $stepNum = 0
+    foreach ($step in $steps) {
+        $stepNum++
+        Write-Host ""
+        Write-Host ">>> Step $stepNum/6: $($step.Name)" -ForegroundColor Yellow
+
+        if ($step.Type -eq "P") {
+            $p = $profiles[$step.Idx]
+            $dynArgs = $p.args
+            if ($p.args -match "-f\s+(\S+)") {
+                $ipFile = Join-Path $PSScriptRoot $Matches[1]
+                if (Test-Path $ipFile) {
+                    $poolInfo = Get-IPPoolCount $ipFile
+                    $dynN = [Math]::Ceiling($poolInfo.Count / 20)
+                    $dynArgs = $p.args -replace '-n \d+', "-n $dynN"
+                }
+            }
+            Push-Location $PSScriptRoot
+            $sw = [System.Diagnostics.Stopwatch]::StartNew()
+            "`n" | & .\bin\CloudflareST.exe ($dynArgs -split " ")
+            $sw.Stop()
+            Write-Host "  耗时: $([math]::Round($sw.Elapsed.TotalSeconds,0))s" -ForegroundColor DarkGray
+
+            if (Test-Path "$PSScriptRoot\output\result.csv") {
+                Submit-HistoryAndSubscription
+            } else {
+                Write-Host "  Failed: no result.csv" -ForegroundColor Red
+            }
+            Pop-Location
+        }
+        elseif ($step.Type -eq "U") {
+            $historyCsv = "$PSScriptRoot\ip_history.csv"
+            if (-not (Test-Path $historyCsv)) {
+                Write-Host "  Skip: ip_history.csv not found" -ForegroundColor Yellow; continue
+            }
+            $rawIps = Get-Content $historyCsv -Encoding UTF8 | Select-Object -Skip 1 |
+                ForEach-Object { ($_ -split ",")[0] } | Sort-Object -Unique
+
+            $masks = @(
+                @{Mask=252; Size=1024; Name="22"; OutFile="ippools\ip_best.txt"}
+                @{Mask=254; Size=512;  Name="23"; OutFile="ippools\ip_expanded_23.txt"}
+                @{Mask=255; Size=256;  Name="24"; OutFile="ippools\ip_history_expanded.txt"}
+            )
+            foreach ($m in $masks) {
+                $subnets = [System.Collections.Generic.HashSet[string]]::new()
+                foreach ($ip in $rawIps) {
+                    $oct = $ip -split '\.'
+                    [void]$subnets.Add("$($oct[0]).$($oct[1]).$([int]$oct[2] -band $m.Mask).0")
+                }
+                $allIps = [System.Collections.Generic.List[string]]::new()
+                foreach ($net in $subnets) {
+                    $parts = $net -split '\.'
+                    $base = ([int]$parts[0] -shl 24) -bor ([int]$parts[1] -shl 16) -bor ([int]$parts[2] -shl 8)
+                    for ($j = 0; $j -lt $m.Size; $j++) {
+                        $v = $base + $j
+                        [void]$allIps.Add("$((($v -shr 24) -band 255)).$((($v -shr 16) -band 255)).$((($v -shr 8) -band 255)).$(($v -band 255))")
+                    }
+                }
+                $outPath = "$PSScriptRoot\$($m.OutFile)"
+                [System.IO.File]::WriteAllLines($outPath, $allIps, [System.Text.UTF8Encoding]::new($false))
+                Write-Host "  /$($m.Name): $($allIps.Count) IP → $($m.OutFile)" -ForegroundColor Green
+            }
+        }
+        elseif ($step.Type -eq "H") {
+            $historyCsv = "$PSScriptRoot\ip_history.csv"
+            if (-not (Test-Path $historyCsv)) {
+                Write-Host "  Skip: ip_history.csv not found" -ForegroundColor Yellow; continue
+            }
+            $raw = Get-Content $historyCsv -Encoding UTF8 | Select-Object -Skip 1 |
+                ForEach-Object { $cols = $_ -split ","; [PSCustomObject]@{IP=$cols[0]; Speed=[double]$cols[2]} } |
+                Group-Object IP |
+                ForEach-Object { [PSCustomObject]@{IP=$_.Name; Count=$_.Count; AvgSpeed=[math]::Round(($_.Group | Measure-Object Speed -Average).Average,1)} } |
+                Sort-Object AvgSpeed -Descending
+
+            $tempFile = "$PSScriptRoot\ippools\ip_history_all.txt"
+            [System.IO.File]::WriteAllLines($tempFile, [string[]]$raw.IP, [System.Text.UTF8Encoding]::new($false))
+
+            $threads = $raw.Count
+            Write-Host "  历史 IP: $threads 个，全量测速 (-n $threads)" -ForegroundColor DarkGray
+
+            Push-Location $PSScriptRoot
+            $sw = [System.Diagnostics.Stopwatch]::StartNew()
+            "`n" | & .\bin\CloudflareST.exe ("-n $threads -f ippools\ip_history_all.txt -o output\result.csv $hArgs".Split(" "))
+            $sw.Stop()
+            Write-Host "  耗时: $([math]::Round($sw.Elapsed.TotalSeconds,0))s" -ForegroundColor DarkGray
+
+            if (Test-Path "$PSScriptRoot\output\result.csv") {
+                $uaPath = "$PSScriptRoot\update-hosts-asian.ps1"
+                if (Test-Path $uaPath) {
+                    Start-Process powershell -Wait -NoNewWindow -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$uaPath`" -Scheduled -SkipTest -NoHistory"
+                }
+            } else {
+                Write-Host "  Failed: no result.csv" -ForegroundColor Red
+            }
+            Pop-Location
+        }
+    }
+    Write-Host ""
+    Write-Host "=== 全流程完成 ===" -ForegroundColor Green
     $lastChoice = $choice
     pause; continue
 }
